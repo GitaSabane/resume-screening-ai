@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Screener</title>
+    <!-- Cache prevention meta tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <i class="fas fa-robot"></i> ResumeAI
+            </div>
+            <div class="header-right">
+                <span class="user-greeting">Welcome, {{ session.user_name }}</span>
+                <a href="{{ url_for('logout') }}" class="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </header>
+
+        <!-- Privacy note -->
+        <div class="privacy-note">
+            <i class="fas fa-shield-alt"></i> Your resume is processed temporarily and never stored.
+        </div>
+
+        <!-- Main content -->
+        <main>
+            <!-- Step indicator -->
+            <div class="steps">
+                <div class="step active" id="step1">① Resume</div>
+                <div class="step" id="step2">② Job Description</div>
+                <div class="step" id="step3">③ Result</div>
+            </div>
+
+            <!-- Upload Section -->
+            <section id="upload-section" class="card">
+                <h2><i class="fas fa-file-upload"></i> Upload Your Resume</h2>
+                <div class="drop-zone" id="drop-zone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your PDF here, or <span class="browse-link">browse</span></p>
+                    <span class="file-info">PDF only • Max 16 MB</span>
+                    <input type="file" id="file-input" accept=".pdf" style="display: none;">
+                </div>
+                <div id="resume-status" style="display: none;">
+                    <div class="status-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="status-details">
+                        <div class="filename" id="resume-filename"></div>
+                        <div class="summary" id="resume-summary">
+                            <span id="candidate-name"></span>
+                            <span id="candidate-email"></span>
+                            <span id="skill-count"></span>
+                            <span id="top-skills"></span>
+                        </div>
+                    </div>
+                    <button id="change-resume-btn" class="btn-outline"><i class="fas fa-exchange-alt"></i> Change</button>
+                </div>
+            </section>
+
+            <!-- Job Description Section -->
+            <section id="jd-section" class="card">
+                <h2><i class="fas fa-briefcase"></i> Job Description</h2>
+                <p class="helper-text">Copy the complete job description from LinkedIn, company websites, or other portals and paste it here.</p>
+                <textarea id="job-desc" rows="5" placeholder="Paste the job description here..."></textarea>
+                <div class="jd-tools">
+                    <div class="counter" id="char-counter">0 characters</div>
+                    <div class="sample-jobs">
+                        <span>Sample:</span>
+                        <button class="sample-btn" data-job="Python Developer">Python Developer</button>
+                        <button class="sample-btn" data-job="Data Analyst">Data Analyst</button>
+                        <button class="sample-btn" data-job="Frontend Developer">Frontend Developer</button>
+                    </div>
+                </div>
+                <div class="action-row">
+                    <button id="analyze-btn" class="btn-primary" disabled><i class="fas fa-search"></i> Analyze My Match</button>
+                    <button id="clear-jd-btn" class="btn-outline"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div id="loading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Analyzing your resume...
+                </div>
+                <div id="error-msg" style="display: none;"></div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="result-section" class="card" style="display: none;">
+                <div class="result-header">
+                    <h2><i class="fas fa-chart-pie"></i> Your Match</h2>
+                    <button id="copy-result-btn" class="btn-outline"><i class="fas fa-copy"></i> Copy</button>
+                </div>
+
+                <!-- Score -->
+                <div class="score-container">
+                    <div class="circular-progress" id="score-ring">
+                        <svg viewBox="0 0 36 36">
+                            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path class="circle-progress" id="score-path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <text x="18" y="20.5" class="score-text" id="score-text">0%</text>
+                        </svg>
+                    </div>
+                    <div class="score-details">
+                        <div class="score-number" id="score-percent">0%</div>
+                        <div class="score-label" id="score-label">Good Match</div>
+                        <p class="score-explanation" id="score-explanation">Your resume matches most of the technical skills required for this role.</p>
+                    </div>
+                </div>
+
+                <!-- Breakdown -->
+                <div class="breakdown">
+                    <h4>Match Breakdown</h4>
+                    <div class="breakdown-item">
+                        <span>Skills Match</span>
+                        <span class="breakdown-value" id="skill-match-pct">0%</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Content Relevance</span>
+                        <span class="breakdown-value" id="content-relevance-pct">0%</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Keyword Coverage</span>
+                        <span class="breakdown-value" id="keyword-coverage-pct">0%</span>
+                    </div>
+                </div>
+
+                <!-- Resume Readiness -->
+                <div class="readiness">
+                    <h4>Resume Readiness</h4>
+                    <div class="readiness-summary" id="readiness-summary"></div>
+                </div>
+
+                <!-- Skills -->
+                <div class="skills-grid">
+                    <div class="matched-skills">
+                        <h4><i class="fas fa-check-circle" style="color: #22c55e;"></i> ✓ Skills You Match</h4>
+                        <ul id="matched-list"></ul>
+                    </div>
+                    <div class="missing-skills">
+                        <h4><i class="fas fa-times-circle" style="color: #dc2626;"></i> ⚠ Skills You May Need</h4>
+                        <ul id="missing-list"></ul>
+                    </div>
+                </div>
+
+                <!-- Suggestions -->
+                <div class="suggestions">
+                    <h4><i class="fas fa-lightbulb"></i> 💡 How You Can Improve</h4>
+                    <ul id="suggestions-list"></ul>
+                </div>
+
+                <!-- Next actions -->
+                <div class="next-actions">
+                    <button id="analyze-another-btn" class="btn-primary"><i class="fas fa-plus"></i> Analyze Another Job</button>
+                    <button id="new-analysis-btn" class="btn-outline"><i class="fas fa-sync-alt"></i> New Analysis</button>
+                    <button id="start-over-btn" class="btn-outline"><i class="fas fa-home"></i> Start Over</button>
+                </div>
+            </section>
+
+            <!-- History -->
+            <section id="history-section" class="card" style="display: none;">
+                <div class="history-header">
+                    <h2><i class="fas fa-history"></i> Recent Job Analyses</h2>
+                    <button id="clear-history-btn" class="btn-outline">Clear History</button>
+                </div>
+                <ul id="history-list"></ul>
+            </section>
+        </main>
+
+        <footer>
+            <p>Made with ❤️ for job seekers</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Prevent back/forward cache (bfcache) from showing a stale dashboard after logout
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                // Page was restored from bfcache – force a reload to re‑validate session
+                window.location.reload();
+            }
+        });
+    </script>
+</body>
+</html>

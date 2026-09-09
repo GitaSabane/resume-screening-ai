@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - ResumeAI</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            padding-right: 40px;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #94a3b8;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+        }
+        .toggle-password:hover {
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <i class="fas fa-robot"></i> ResumeAI
+            </div>
+            <h2>Create Account</h2>
+            <p class="auth-subtitle">Join and start screening your resumes.</p>
+            {% if error %}
+                <div class="auth-error">{{ error|safe }}</div>
+            {% endif %}
+            <form method="POST" id="register-form" novalidate autocomplete="off">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="John Doe" required autocomplete="off" value="{{ request.form.name or '' }}">
+                    <div class="field-error" id="name-error"></div>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="off" value="{{ request.form.email or '' }}">
+                    <div class="field-error" id="email-error"></div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Min 6 characters" required autocomplete="new-password">
+                        <button type="button" class="toggle-password" id="toggle-register-password" aria-label="Toggle password visibility">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="field-error" id="password-error"></div>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="confirm_password" name="confirm_password" placeholder="Re-enter password" required autocomplete="new-password">
+                        <button type="button" class="toggle-password" id="toggle-register-confirm" aria-label="Toggle password visibility">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="field-error" id="confirm-error"></div>
+                </div>
+                <button type="submit" class="btn-primary btn-full">Create Account</button>
+            </form>
+            <div class="auth-links">
+                <p>Already have an account? <a href="{{ url_for('login') }}">Log In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // === DISABLE BACK BUTTON ===
+            window.history.pushState(null, null, window.location.href);
+            window.addEventListener('popstate', function () {
+                window.history.pushState(null, null, window.location.href);
+            });
+
+            // === CLEAR FORM FIELDS ON PAGE LOAD ===
+            window.addEventListener('load', function() {
+                document.getElementById('name').value = '';
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('confirm_password').value = '';
+            });
+
+            // === FORM VALIDATION ===
+            const form = document.getElementById('register-form');
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const confirmInput = document.getElementById('confirm_password');
+            const nameError = document.getElementById('name-error');
+            const emailError = document.getElementById('email-error');
+            const passwordError = document.getElementById('password-error');
+            const confirmError = document.getElementById('confirm-error');
+
+            form.addEventListener('submit', function(e) {
+                let valid = true;
+                nameError.textContent = '';
+                emailError.textContent = '';
+                passwordError.textContent = '';
+                confirmError.textContent = '';
+
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
+                const confirm = confirmInput.value.trim();
+
+                if (!name) {
+                    nameError.textContent = 'Please enter your name.';
+                    valid = false;
+                }
+                if (!email) {
+                    emailError.textContent = 'Please enter your email address.';
+                    valid = false;
+                } else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/.test(email)) {
+                    emailError.textContent = 'Please enter a valid email address.';
+                    valid = false;
+                }
+                if (!password) {
+                    passwordError.textContent = 'Please enter a password.';
+                    valid = false;
+                } else if (password.length < 6) {
+                    passwordError.textContent = 'Password must be at least 6 characters.';
+                    valid = false;
+                }
+                if (password && confirm && password !== confirm) {
+                    confirmError.textContent = 'Passwords do not match.';
+                    valid = false;
+                }
+                if (!valid) {
+                    e.preventDefault();
+                }
+            });
+
+            // === TOGGLE PASSWORD VISIBILITY ===
+            function setupToggle(buttonId, inputId) {
+                const btn = document.getElementById(buttonId);
+                const field = document.getElementById(inputId);
+                btn.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    if (field.type === 'password') {
+                        field.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        field.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            }
+            setupToggle('toggle-register-password', 'password');
+            setupToggle('toggle-register-confirm', 'confirm_password');
+        })();
+    </script>
+</body>
+</html>
